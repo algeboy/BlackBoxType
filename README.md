@@ -3,7 +3,7 @@ Algebra of black-box type
 
 Copyright (c) 2018-2019
 
-Heiko Dietrich, Melbourne Australia
+Heiko Dietrich, Monash University, Melbourne Australia
 James B. Wilson, Colorado State University, Fort Collins, USA
 
 Algorithms for generic algebraic computation with operations typechecked for validity of axioms.
