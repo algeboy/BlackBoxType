@@ -17,13 +17,11 @@ data Nat2 = Zbit | Ibit | Times2 Nat2 | Times2Plus1 Nat2
 (+) (Times2Plus1 x) (Times2 y) = Times2Plus1 ((+) x y)              -- x1 + y0 = (x+y)1
 (+) (Times2Plus1 x) (Times2Plus1 y) = Times2 ((+) x ((+) y Ibit) )  -- x1 + y1 = (x+(y+1))0
 
-||| 0 is additive identity -- an implication defined as function.
---leftPlusId : (x:Nat2) -> ((+) Zbit x) = x  -- Ends in a type "=" inhabited by Refl
---leftPlusId x = Refl
---rightPlusId : (x:Nat2) -> ((+) x Zbit) = x  -- Ends in a type "=" inhabited by Refl
---rightPlusId x = Refl
 
-||| Isomorphism binary natural numbers to unary natural numbers
+||| ---------------------------------------------------------------------------
+||| The Isomorphism binary natural numbers to unary natural numbers
+||| ---------------------------------------------------------------------------
+
 btou : Nat2 -> Nat
 btou Zbit             = Z
 btou Ibit             = S Z
@@ -34,13 +32,75 @@ utob : Nat -> Nat2
 utob Z = Zbit
 utob (S k) = (utob k) + Ibit
 
+||| ---------------------------------------------------------------------------
+||| The proof of Isomorphism
+||| ---------------------------------------------------------------------------
 
-ZbitIsZ: utob Z = Zbit  -- This type checks, so inhabited by Refl
---ZbitIsZ = rewrite utob Z in utob Z = Zbit
+||| ---------------------------------------------------------------------------
+||| Equality only supported by reflexive constructor `Same`
+||| So `Same 5 : EqNat 5 5`  so EqNat k k is always inhabited.
+||| However there is no constructor for `EqNat 4 5` for example, that type
+||| exists but is uninhabitted. I.e.
+|||
+||| *EqNat> the (EqNat 4 4) (Same _)  works but
+||| *EqNat> the (EqNat 4 5) (Same _)  fails to type check
+|||
+||| ---------------------------------------------------------------------------
+data EqNat : (i:Nat) -> (j:Nat) -> Type where
+    Same : (k:Nat) -> EqNat k k
 
-IbitIsSZ :  utob (S Z) = Ibit  
+data EqNat2 : (i:Nat2) -> (j:Nat2) -> Type where
+    Same : (k:Nat2) -> EqNat k k
+    
+||| ---------------------------------------------------------------------------
+||| Function to lift equality inductively.
+||| This isn't total but only used on equal inputs in the type checker.
+||| ---------------------------------------------------------------------------
+liftEq : (i:Nat) -> (j:Nat) -> (eq:EqNat i j) -> EqNat (S i) (S k)
+liftEq k k Same k = Same (S k)
 
+liftEqTimes2 : (i:Nat2) -> (j:Nat2) -> (eq:EqNat2 i j) -> EqNat2 (Times2 i) (Times2 k)
+liftEq k k Same k = Same (Times2 k)
+liftEqTimes2Plus1 : (i:Nat2) -> (j:Nat2) -> (eq:EqNat2 i j) -> EqNat2 (Times2Plus1 i) (Times2Plus1 k)
+liftEq k k Same k = Same (Times2Plus1 k)
+
+||| ---------------------------------------------------------------------------
+||| Check equality and convert to Maybe EqNat
+||| As usual define checkEqNat on the various constructors of Nat/Nat2
+||| where the behavior is clear.  Makes an total function by induction.
+|||
+||| checkEqNat 4 5 = Nothing : Maybe EqNat 4 5
+||| checkEqNat 4 4 = Just Same 4 : Maybe EqNat 4 4
+|||
+||| ---------------------------------------------------------------------------
+checkEqNat : (i:Nat) -> (j:Nat) -> Maybe( EqNat i j )
+checkEqNat Z Z          = Just Same Z
+checkEqNat (S k) Z      = Nothing
+checkEqNat Z (S k)      = Nothing
+checkEqNat (S k) (S m)  = case checkEqNat k m of
+                            Nothing => Nothing
+                            Just eq  => Just (liftEq _ _ eq)  -- Infer missing terms
+
+checkEqNat2 : (i:Nat2) -> (j:Nat2) -> Maybe( EqNat2 i j )
+checkEqNat2 Zbit          Zbit               = Just Same Zbit
+checkEqNat2 Ibit          Zbit               = Nothing
+checkEqNat2 Times2 k      Zbit               = Nothing
+checkEqNat2 Times2Plus1 k Zbit               = Nothing
+checkEqNat2 Ibit          Ibit               = Just Same Ibit
+checkEqNat2 Times2 k      Ibit               = Nothing
+checkEqNat2 Times2Plus1 k Ibit               = Nothing
+checkEqNat2 Times2 k      Times2 m           = case checkEqNat2 k m of
+                                                    Nothing => Nothing
+                                                    Just eq => Just (liftEqTimes2 _ _ eq)
+checkEqNat2 Times2Plus1 k Times2 m           = Nothing
+checkEqNat2 Times2Plus1 k Times2Plus1 m      = case checkEqNat2 k m of
+                                                    Nothing => Nothing
+                                                    Just eq => Just (liftEqTimes2Plus1 _ _ eq)
+
+                            
+||| ---------------------------------------------------------------------------
+||| 
+||| ---------------------------------------------------------------------------
 leftIdBU : (x:Nat2) ->  (utob (btou x)) = x 
-leftIdBU Zbit = ZbitIsZ     -- pattern matching on first variable so need to pre-reduce
-leftIdBU Ibit = IbitIsSZ
+leftIdBU Zbit = checkEqNat2 (utob(btou Zbit)) Zbit     
 
