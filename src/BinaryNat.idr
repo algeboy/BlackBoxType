@@ -1,9 +1,12 @@
 module BinaryInt
 
-||| A binary representation of integers
-data Nat2 = Zbit | Ibit | Times2 Nat2 | Times2Plus1 Nat2
+||| A type for binary representation of integers
+data Nat2   = Zbit              --  0
+            | Ibit              --  1 
+            | Times2 Nat2       -- x0
+            | Times2Plus1 Nat2  -- x1
 
-||| Binary addition
+||| Binary addition, case by case.
 (+) : Nat2 -> Nat2 -> Nat2
 (+) Zbit y = y                                                      --  0 +  y = y
 (+) x Zbit = x                                                      --  x +  0 = x
@@ -19,31 +22,13 @@ data Nat2 = Zbit | Ibit | Times2 Nat2 | Times2Plus1 Nat2
 
 
 ||| ---------------------------------------------------------------------------
-||| The Isomorphism binary natural numbers to unary natural numbers
-||| ---------------------------------------------------------------------------
-
-btou : Nat2 -> Nat
-btou Zbit             = Z
-btou Ibit             = S Z
-btou (Times2 x)       = (btou x) + (btou x)
-btou (Times2Plus1 x)  = S ((btou x) + (btou x))
-
-utob : Nat -> Nat2
-utob Z = Zbit
-utob (S k) = (utob k) + Ibit
-
-||| ---------------------------------------------------------------------------
-||| The proof of Isomorphism
-||| ---------------------------------------------------------------------------
-
-||| ---------------------------------------------------------------------------
 ||| Equality only supported by reflexive constructor `Same`
-||| So `Same 5 : EqNat 5 5`  so EqNat k k is always inhabited.
+||| So `Same 5 : EqNat 5 5`  so `EqNat k k` is **always** inhabited.
 ||| However there is no constructor for `EqNat 4 5` for example, that type
-||| exists but is uninhabitted. I.e.
+||| exists but is **never** uninhabitted. I.e.
 |||
-||| *EqNat> the (EqNat 4 4) (Same _)  works but
-||| *EqNat> the (EqNat 4 5) (Same _)  fails to type check
+||| *EqNat> the (EqNat 4 4) (Same _)  -- works, 4 replaces _
+||| *EqNat> the (EqNat 4 5) (Same _)  -- fails, no solution to _
 |||
 ||| ---------------------------------------------------------------------------
 data EqNat : (i:Nat) -> (j:Nat) -> Type where
@@ -73,13 +58,13 @@ liftEq k k Same k = Same (Times2Plus1 k)
 ||| checkEqNat 4 4 = Just Same 4 : Maybe EqNat 4 4
 |||
 ||| ---------------------------------------------------------------------------
-checkEqNat : (i:Nat) -> (j:Nat) -> Maybe( EqNat i j )
-checkEqNat Z Z          = Just Same Z
+checkEqNat : (i:Nat) -> (j:Nat) -> Maybe( i = j )
+checkEqNat Z Z          = Just Refl
 checkEqNat (S k) Z      = Nothing
 checkEqNat Z (S k)      = Nothing
 checkEqNat (S k) (S m)  = case checkEqNat k m of
                             Nothing => Nothing
-                            Just eq  => Just (liftEq _ _ eq)  -- Infer missing terms
+                            Just prfEq  => Just cong prfEq
 
 checkEqNat2 : (i:Nat2) -> (j:Nat2) -> Maybe( EqNat2 i j )
 checkEqNat2 Zbit          Zbit               = Just Same Zbit
@@ -97,10 +82,25 @@ checkEqNat2 Times2Plus1 k Times2Plus1 m      = case checkEqNat2 k m of
                                                     Nothing => Nothing
                                                     Just eq => Just (liftEqTimes2Plus1 _ _ eq)
 
-                            
+    
+
 ||| ---------------------------------------------------------------------------
-||| 
+||| The Isomorphism binary natural numbers to unary natural numbers
+||| ---------------------------------------------------------------------------
+
+btou : Nat2 -> Nat
+btou Zbit             = Z
+btou Ibit             = S Z
+btou (Times2 x)       = (btou x) + (btou x)
+btou (Times2Plus1 x)  = S ((btou x) + (btou x))
+
+utob : Nat -> Nat2
+utob Z = Zbit
+utob (S k) = (utob k) + Ibit
+
+||| ---------------------------------------------------------------------------
+||| The proof of Isomorphism
 ||| ---------------------------------------------------------------------------
 leftIdBU : (x:Nat2) ->  (utob (btou x)) = x 
-leftIdBU Zbit = checkEqNat2 (utob(btou Zbit)) Zbit     
+leftIdBU Zbit = the (checkEqNat2 (utob(btou Zbit)) Zbit)  Same _
 
