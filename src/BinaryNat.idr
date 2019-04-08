@@ -22,6 +22,17 @@ data Nat2   = Zbit              --  0
 
 
 ||| ---------------------------------------------------------------------------
+||| Prove associativity.
+||| This is a simple proposition, i.e. a singleton type.
+||| ---------------------------------------------------------------------------
+
+assLaw : (x:Nat2) -> (y:Nat2) -> (z:Nat2) -> (+) x ( (+) y z ) = (+) ((+) x y ) z
+assLaw x y Zbit = ?xyZbit
+
+
+
+
+||| ---------------------------------------------------------------------------
 ||| Equality only supported by reflexive constructor `Same`
 ||| So `Same 5 : EqNat 5 5`  so `EqNat k k` is **always** inhabited.
 ||| However there is no constructor for `EqNat 4 5` for example, that type
@@ -35,19 +46,19 @@ data EqNat : (i:Nat) -> (j:Nat) -> Type where
     Same : (k:Nat) -> EqNat k k
 
 data EqNat2 : (i:Nat2) -> (j:Nat2) -> Type where
-    Same : (k:Nat2) -> EqNat k k
+    Same2 : (k:Nat2) -> EqNat2 k k
     
 ||| ---------------------------------------------------------------------------
 ||| Function to lift equality inductively.
 ||| This isn't total but only used on equal inputs in the type checker.
 ||| ---------------------------------------------------------------------------
-liftEq : (i:Nat) -> (j:Nat) -> (eq:EqNat i j) -> EqNat (S i) (S k)
-liftEq k k Same k = Same (S k)
+--liftEq : (i:Nat) -> (j:Nat) -> (i = j) -> (S i) = (S j)
+--liftEq k k Refl = Refl
 
-liftEqTimes2 : (i:Nat2) -> (j:Nat2) -> (eq:EqNat2 i j) -> EqNat2 (Times2 i) (Times2 k)
-liftEq k k Same k = Same (Times2 k)
-liftEqTimes2Plus1 : (i:Nat2) -> (j:Nat2) -> (eq:EqNat2 i j) -> EqNat2 (Times2Plus1 i) (Times2Plus1 k)
-liftEq k k Same k = Same (Times2Plus1 k)
+--liftEqTimes2 : (i:Nat2) -> (j:Nat2) -> (eq:EqNat2 i j) -> EqNat2 (Times2 i) (Times2 j)
+--liftEqTimes2 k k (Same2 k) = Same2 (Times2 k)
+--liftEqTimes2Plus1 : (i:Nat2) -> (j:Nat2) -> (eq:EqNat2 i j) -> EqNat2 (Times2Plus1 i) (Times2Plus1 j)
+--liftEqTimes2Plus1 k k (Same2 k) = Same2 (Times2Plus1 k)
 
 ||| ---------------------------------------------------------------------------
 ||| Check equality and convert to Maybe EqNat
@@ -64,23 +75,23 @@ checkEqNat (S k) Z      = Nothing
 checkEqNat Z (S k)      = Nothing
 checkEqNat (S k) (S m)  = case checkEqNat k m of
                             Nothing => Nothing
-                            Just prfEq  => Just cong prfEq
+                            Just prfEq  => Just (cong prfEq)
 
-checkEqNat2 : (i:Nat2) -> (j:Nat2) -> Maybe( EqNat2 i j )
-checkEqNat2 Zbit          Zbit               = Just Same Zbit
-checkEqNat2 Ibit          Zbit               = Nothing
-checkEqNat2 Times2 k      Zbit               = Nothing
-checkEqNat2 Times2Plus1 k Zbit               = Nothing
-checkEqNat2 Ibit          Ibit               = Just Same Ibit
-checkEqNat2 Times2 k      Ibit               = Nothing
-checkEqNat2 Times2Plus1 k Ibit               = Nothing
-checkEqNat2 Times2 k      Times2 m           = case checkEqNat2 k m of
+checkEqNat2 : (i:Nat2) -> (j:Nat2) -> Maybe( i = j )
+checkEqNat2 Zbit            Zbit               = Just Refl
+checkEqNat2 Ibit            Zbit               = Nothing
+checkEqNat2 (Times2 k)      Zbit               = Nothing
+checkEqNat2 (Times2Plus1 k) Zbit               = Nothing
+checkEqNat2 Ibit            Ibit               = Just Refl
+checkEqNat2 (Times2 k)      Ibit               = Nothing
+checkEqNat2 (Times2Plus1 k) Ibit               = Nothing
+checkEqNat2 (Times2 k)      (Times2 m)           = case checkEqNat2 k m of
                                                     Nothing => Nothing
-                                                    Just eq => Just (liftEqTimes2 _ _ eq)
-checkEqNat2 Times2Plus1 k Times2 m           = Nothing
-checkEqNat2 Times2Plus1 k Times2Plus1 m      = case checkEqNat2 k m of
+                                                    Just eq => Just (cong eq)
+checkEqNat2 (Times2Plus1 k) (Times2 m)           = Nothing
+checkEqNat2 (Times2Plus1 k) (Times2Plus1 m)      = case checkEqNat2 k m of
                                                     Nothing => Nothing
-                                                    Just eq => Just (liftEqTimes2Plus1 _ _ eq)
+                                                    Just eq => Just (cong eq)
 
     
 
@@ -100,7 +111,13 @@ utob (S k) = (utob k) + Ibit
 
 ||| ---------------------------------------------------------------------------
 ||| The proof of Isomorphism
+|||
+||| Idris does eager evaluation so utob(btou Zbit) = utob Z
 ||| ---------------------------------------------------------------------------
-leftIdBU : (x:Nat2) ->  (utob (btou x)) = x 
-leftIdBU Zbit = the (checkEqNat2 (utob(btou Zbit)) Zbit)  Same _
+leftIdBU : (x:Nat2) ->  utob (btou x) = x
+leftIdBU Zbit = Refl
 
+
+
+
+                    
