@@ -24,10 +24,14 @@ ascLaw Z (S k) c = Refl
 ascLaw (S j) b c = cong (ascLaw j b c)
 
 
-cmLaw : (a:Nat) -> (b:Nat) -> (a+b) = (b+a)
+total cmLaw : (a:Nat) -> (b:Nat) -> (a+b) = (b+a)
 cmLaw Z Z = Refl
 cmLaw Z (S k) = cong {f=S} (left_id k) where
     left_id : (j:Nat) -> j = j+0
     left_id Z = Refl
     left_id (S d) = cong {f=S} (left_id d)
---cmLaw (S j) b = cong (cmLaw j b)
+cmLaw (S j) b = rewrite sucMove b j in cong {f=S} (cmLaw j b) where
+    sucMove : (j:Nat) -> (k:Nat) -> j + (S k) = S(j+k)
+    sucMove Z k = Refl
+    sucMove (S j) k = cong {f=S} (sucMove j k)
+    
